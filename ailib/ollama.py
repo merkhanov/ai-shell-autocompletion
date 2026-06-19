@@ -18,7 +18,7 @@ def query_ollama(prompt, *, url, model, max_tokens, keep_alive, timeout,
     is a list of stop strings. Raises on network/HTTP errors — the caller is
     expected to catch and treat any failure as "no suggestion".
     """
-    options = {"temperature": 0.2, "num_predict": max_tokens}
+    options = {"temperature": 0.1, "num_predict": max_tokens}
     if stop:
         options["stop"] = stop
     payload = json.dumps({
