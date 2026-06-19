@@ -5,7 +5,9 @@
 typeset -g _AI_AC_DIR="${0:A:h}"
 
 # --- config defaults (override before sourcing) ---
-: ${AI_AC_MODEL:=qwen2.5-coder:3b}
+# Default to qwen2.5-coder:1.5b — fast, and excellent via FIM completion.
+# Bump to :3b or :7b for higher-quality suggestions at the cost of latency.
+: ${AI_AC_MODEL:=qwen2.5-coder:1.5b}
 : ${AI_AC_OLLAMA_URL:=http://localhost:11434}
 : ${AI_AC_DEBOUNCE:=0.2}
 : ${AI_AC_MIN_CHARS:=3}

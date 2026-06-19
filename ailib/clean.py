@@ -1,23 +1,19 @@
 def clean_suggestion(raw: str, prefix: str) -> str:
-    """Turn raw model output into the suffix that follows ``prefix``.
+    """Turn raw FIM model output into the suffix that follows ``prefix``.
 
-    Returns ``""`` when the output is unusable (blank, fences only, or just
-    an echo of what the user already typed).
+    FIM output is already a continuation (no echo, no fences), so cleaning is
+    light: take the first line, drop stray markdown, and preserve leading
+    whitespace because it can be significant (e.g. the space in ``grep -r`` ->
+    `` "pattern"``). Returns ``""`` when the output is unusable.
     """
-    if not raw or not raw.strip():
+    if not raw:
         return ""
-    s = raw.strip()
-    if s.startswith("```"):
-        lines = s.splitlines()[1:]
-        if lines and lines[-1].strip().startswith("```"):
-            lines = lines[:-1]
-        s = "\n".join(lines).strip()
-    # first non-empty line only
-    s = next((ln for ln in s.splitlines() if ln.strip()), "").strip()
-    s = s.strip("`").strip()
-    if not s:
+    s = raw.split("\n", 1)[0]            # first line only
+    if s.strip().startswith("```"):      # reject stray markdown fences
         return ""
-    suffix = s[len(prefix):] if s.startswith(prefix) else s
-    if not suffix or suffix == prefix:
+    s = s.rstrip()                       # keep leading space; trim the tail
+    if s.startswith(prefix):             # defensive: strip an echoed prefix
+        s = s[len(prefix):]
+    if not s.strip() or s == prefix:
         return ""
-    return suffix
+    return s

@@ -30,6 +30,19 @@ class TestQueryOllama(unittest.TestCase):
         req = uo.call_args[0][0]
         self.assertEqual(req.full_url, "http://x:1/api/generate")
 
+    def test_raw_and_stop_included_in_payload(self):
+        import json
+        fake = mock.MagicMock()
+        fake.read.return_value = b'{"response": "x"}'
+        fake.__enter__ = lambda s: fake
+        fake.__exit__ = lambda s, *a: False
+        with mock.patch("ailib.ollama.urllib.request.urlopen", return_value=fake) as uo:
+            query_ollama("p", url="http://x:1", model="m", max_tokens=64,
+                         keep_alive="30m", timeout=5, raw=True, stop=["\n"])
+        body = json.loads(uo.call_args[0][0].data.decode())
+        self.assertTrue(body["raw"])
+        self.assertEqual(body["options"]["stop"], ["\n"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 DIR="$(cd "$(dirname "$0")" && pwd)"
-MODEL="${AI_AC_MODEL:-qwen2.5-coder:3b}"
+MODEL="${AI_AC_MODEL:-qwen2.5-coder:1.5b}"
 
 command -v ollama >/dev/null || { echo "Install Ollama first: https://ollama.com"; exit 1; }
 command -v python3 >/dev/null || { echo "python3 required"; exit 1; }

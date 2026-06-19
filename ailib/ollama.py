@@ -10,22 +10,24 @@ def parse_response(body: str) -> str:
         return ""
 
 
-def query_ollama(prompt, *, url, model, max_tokens, keep_alive, timeout):
+def query_ollama(prompt, *, url, model, max_tokens, keep_alive, timeout,
+                 raw=False, stop=None):
     """POST ``prompt`` to ``{url}/api/generate`` and return the raw response text.
 
-    Raises on network/HTTP errors — the caller is expected to catch and treat
-    any failure as "no suggestion".
+    ``raw=True`` bypasses the chat template (required for FIM prompts). ``stop``
+    is a list of stop strings. Raises on network/HTTP errors — the caller is
+    expected to catch and treat any failure as "no suggestion".
     """
+    options = {"temperature": 0.2, "num_predict": max_tokens}
+    if stop:
+        options["stop"] = stop
     payload = json.dumps({
         "model": model,
         "prompt": prompt,
         "stream": False,
         "keep_alive": keep_alive,
-        "options": {
-            "temperature": 0.2,
-            "num_predict": max_tokens,
-            "stop": ["\n"],
-        },
+        "raw": raw,
+        "options": options,
     }).encode()
     req = urllib.request.Request(
         f"{url}/api/generate",

@@ -13,8 +13,11 @@ class TestCleanSuggestion(unittest.TestCase):
     def test_takes_first_line_only(self):
         self.assertEqual(clean_suggestion("ckout main\nrm -rf /", "git che"), "ckout main")
 
-    def test_strips_code_fences(self):
-        self.assertEqual(clean_suggestion("```\nckout main\n```", "git che"), "ckout main")
+    def test_preserves_significant_leading_space(self):
+        self.assertEqual(clean_suggestion(' "pattern" .', "grep -r"), ' "pattern" .')
+
+    def test_rejects_code_fence(self):
+        self.assertEqual(clean_suggestion("```bash", "git che"), "")
 
     def test_empty_when_equals_prefix(self):
         self.assertEqual(clean_suggestion("git che", "git che"), "")

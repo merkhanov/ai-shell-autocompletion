@@ -12,7 +12,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from ailib.context import gather_context
-from ailib.prompt import build_prompt
+from ailib.prompt import build_prompt, STOP_TOKENS
 from ailib.ollama import query_ollama
 from ailib.clean import clean_suggestion
 
@@ -54,6 +54,8 @@ def main():
             max_tokens=int(_env("AI_AC_MAX_TOKENS", "64")),
             keep_alive=_env("AI_AC_KEEP_ALIVE", "30m"),
             timeout=float(_env("AI_AC_TIMEOUT", "5")),
+            raw=True,
+            stop=STOP_TOKENS,
         )
     except Exception as e:
         _log(f"query failed: {e}")

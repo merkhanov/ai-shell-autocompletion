@@ -11,10 +11,15 @@ register a custom suggestion *strategy* that calls a small Python helper, which
 gathers context (cwd, git, history, directory, OS), prompts Ollama, and returns
 the completion.
 
+Completions use **fill-in-middle (FIM)**, the mode `qwen2.5-coder` is trained
+for — it produces clean continuations instead of the echoes/markdown you get
+from instruction-style prompts, so even the tiny 1.5b model works well.
+
 ## Requirements
 
 - [Ollama](https://ollama.com) installed and running
-- A model pulled (default `qwen2.5-coder:3b`): `ollama pull qwen2.5-coder:3b`
+- A `qwen2.5-coder` model pulled (default `qwen2.5-coder:1.5b`): `ollama pull qwen2.5-coder:1.5b`
+  - The FIM prompt is `qwen2.5-coder`-specific; other models need a different prompt.
 - [`zsh-autosuggestions`](https://github.com/zsh-users/zsh-autosuggestions) installed and sourced in your `.zshrc`
 - Python 3 (standard library only — no pip packages)
 
@@ -56,7 +61,7 @@ Set any of these before the source line in `~/.zshrc`:
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `AI_AC_MODEL` | `qwen2.5-coder:3b` | Ollama model to use |
+| `AI_AC_MODEL` | `qwen2.5-coder:1.5b` | Ollama model to use |
 | `AI_AC_OLLAMA_URL` | `http://localhost:11434` | Ollama endpoint |
 | `AI_AC_DEBOUNCE` | `0.2` | Seconds to wait after you stop typing |
 | `AI_AC_MIN_CHARS` | `3` | Minimum buffer length before suggesting |
@@ -67,9 +72,9 @@ Set any of these before the source line in `~/.zshrc`:
 | `AI_AC_ENABLED` | `1` | Start enabled (`0` to start off) |
 | `AI_AC_DEBUG` | `0` | `1` → log to `/tmp/ai-ac.log` |
 
-A smaller model (e.g. `qwen2.5-coder:1.5b`) is faster on modest hardware; a
-larger one gives better suggestions. Tune `AI_AC_DEBOUNCE` up if your machine
-struggles, down for snappier suggestions.
+A larger model (e.g. `qwen2.5-coder:3b` or `:7b`) gives better suggestions at
+the cost of latency. Tune `AI_AC_DEBOUNCE` up if your machine struggles, down
+for snappier suggestions.
 
 ## How it works
 
@@ -85,6 +90,11 @@ The strategy returns the *full* line (`prefix + suffix`); zsh-autosuggestions
 greys the part after what you typed. Debounce is content-based: the worker
 sleeps, then only calls Ollama if the buffer hasn't changed — so rapid typing
 doesn't flood the model.
+
+The helper prompts Ollama in **fill-in-middle** mode: context is rendered as
+shell comments, then the partial command, with an empty suffix — so the model
+fills the gap (the rest of the command). This is why a 1.5b model gives clean
+completions: it's continuing text, not answering a question.
 
 ## Troubleshooting
 

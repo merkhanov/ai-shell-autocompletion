@@ -15,14 +15,20 @@ class TestBuildPrompt(unittest.TestCase):
         for needle in ("git che", "/home/u/proj", "main", "README.md", "cd proj"):
             self.assertIn(needle, p)
 
+    def test_uses_fim_format(self):
+        p = build_prompt("ls", CTX)
+        self.assertTrue(p.startswith("<|fim_prefix|>"))
+        self.assertTrue(p.endswith("<|fim_middle|>"))
+        self.assertIn("<|fim_suffix|>", p)
+
+    def test_partial_command_sits_just_before_suffix_marker(self):
+        # the model must complete the command, so it ends the prefix region
+        p = build_prompt("git che", CTX)
+        self.assertIn("git che<|fim_suffix|>", p)
+
     def test_handles_missing_context_keys(self):
         p = build_prompt("ls", {})  # must not raise
         self.assertIn("ls", p)
-
-    def test_instructs_suffix_only(self):
-        p = build_prompt("ls", CTX).lower()
-        self.assertIn("only", p)
-        self.assertIn("continue", p)
 
 
 if __name__ == "__main__":
