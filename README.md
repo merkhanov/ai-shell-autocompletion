@@ -5,11 +5,16 @@ local [Ollama](https://ollama.com) model predicts the rest and shows it as
 greyed-out ghost text. Press `→` to accept. Everything runs locally — nothing
 leaves your machine.
 
-It's built on top of
-[`zsh-autosuggestions`](https://github.com/zsh-users/zsh-autosuggestions): we
-register a custom suggestion *strategy* that calls a small Python helper, which
-gathers context (cwd, git, history, directory, OS), prompts Ollama, and returns
-the completion.
+It works just like
+[`zsh-autosuggestions`](https://github.com/zsh-users/zsh-autosuggestions), with
+AI added: it shows the **instant history match first** (exactly like
+zsh-autosuggestions, no model call), and only falls back to **AI** when history
+has no match. So commands you've run before are instant and free; novel commands
+get a context-aware AI suggestion a moment later.
+
+Under the hood it registers a custom suggestion *strategy* that calls a small
+Python helper, which gathers context (cwd, git, history, directory, OS), prompts
+Ollama, and returns the completion.
 
 Completions use **fill-in-middle (FIM)**, the mode `qwen2.5-coder` is trained
 for — it produces clean continuations instead of the echoes/markdown you get
@@ -78,6 +83,7 @@ Set any of these before the source line in `~/.zshrc`:
 | `AI_AC_HISTORY_LINES` | `30` | Recent history lines sent as context |
 | `AI_AC_TIMEOUT` | `5` | Request timeout (seconds) |
 | `AI_AC_ENABLED` | `1` | Start enabled (`0` to start off) |
+| `AI_AC_STRATEGY` | `history ai` | Suggestion chain. Set `ai` for pure AI (no history) |
 | `AI_AC_TOGGLE_KEY` | _(none)_ | Key to toggle on/off, e.g. `'^G'`. Empty = bind nothing |
 | `AI_AC_DEBUG` | `0` | `1` → log to `/tmp/ai-ac.log` |
 
@@ -88,11 +94,13 @@ for snappier suggestions.
 ## How it works
 
 ```
-zsh-autosuggestions  →  strategy "ai"  →  (debounce)  →  python3 ai_suggest.py
-   renders ghost text                                      gather context
-   accept / discard widgets                                build prompt
-   async forked worker                                     POST Ollama /api/generate
-                                                           clean → print suffix
+zsh-autosuggestions  →  history?  ──found──►  instant suggestion (no model call)
+   renders ghost text       │
+   accept / discard         └─none─►  strategy "ai" → (debounce) → ai_suggest.py
+   async forked worker                                    gather context
+                                                          build prompt (FIM)
+                                                          POST Ollama /api/generate
+                                                          clean → print suffix
 ```
 
 The strategy returns the *full* line (`prefix + suffix`); zsh-autosuggestions

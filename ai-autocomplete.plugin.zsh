@@ -38,7 +38,9 @@ if (( ! ${+functions[_zsh_autosuggest_fetch_suggestion]} )); then
 fi
 
 # --- wire into zsh-autosuggestions ---
-ZSH_AUTOSUGGEST_STRATEGY=(ai)
+# History first (instant, exactly like zsh-autosuggestions); fall back to AI
+# only when history has no match. Set AI_AC_STRATEGY=ai for pure AI.
+ZSH_AUTOSUGGEST_STRATEGY=(${=AI_AC_STRATEGY:-history ai})
 ZSH_AUTOSUGGEST_USE_ASYNC=1
 
 # --- debounce: track the live buffer in a temp file -------------------------
