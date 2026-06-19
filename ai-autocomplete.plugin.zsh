@@ -1,6 +1,7 @@
 # ai-autocomplete.plugin.zsh
-# Cursor-style inline AI autocompletion for zsh, built on zsh-autosuggestions.
-# Source this AFTER zsh-autosuggestions is loaded.
+# Cursor-style inline AI autocompletion for zsh — an invisible layer over the
+# shell. Self-contained: it loads zsh-autosuggestions itself if needed, so a
+# single `source` line (in any order) is all that's required.
 
 typeset -g _AI_AC_DIR="${0:A:h}"
 
@@ -17,8 +18,24 @@ typeset -g _AI_AC_DIR="${0:A:h}"
 : ${AI_AC_TIMEOUT:=5}
 : ${AI_AC_DEBUG:=0}
 : ${AI_AC_ENABLED:=1}
+: ${AI_AC_TOGGLE_KEY:=}        # empty = no keybind (stay invisible); e.g. '^G'
 export AI_AC_MODEL AI_AC_OLLAMA_URL AI_AC_MIN_CHARS AI_AC_MAX_TOKENS \
        AI_AC_KEEP_ALIVE AI_AC_HISTORY_LINES AI_AC_TIMEOUT AI_AC_DEBUG
+
+# --- appearance: subtle, native-looking ghost text (respect user override) ---
+: ${ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE:=fg=8}
+
+# --- self-contained: load zsh-autosuggestions if it isn't already ------------
+if (( ! ${+functions[_zsh_autosuggest_fetch_suggestion]} )); then
+  for _za in \
+    /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh \
+    /usr/local/share/zsh-autosuggestions/zsh-autosuggestions.zsh \
+    /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh \
+    "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh"; do
+    [[ -r "$_za" ]] && { source "$_za"; break; }
+  done
+  unset _za
+fi
 
 # --- wire into zsh-autosuggestions ---
 ZSH_AUTOSUGGEST_STRATEGY=(ai)
@@ -32,6 +49,7 @@ typeset -g _AI_AC_BUF_FILE="${TMPDIR:-/tmp}/ai-ac-buf.$$"
 typeset -g _AI_AC_LAST_BUF=""
 
 _ai_ac_write_buf() {
+  [[ "$AI_AC_ENABLED" == "1" ]] || return
   if [[ "$BUFFER" != "$_AI_AC_LAST_BUF" ]]; then
     _AI_AC_LAST_BUF="$BUFFER"
     print -rn -- "$BUFFER" > "$_AI_AC_BUF_FILE" 2>/dev/null
@@ -58,11 +76,9 @@ _zsh_autosuggest_strategy_ai() {
   [[ -n $suffix ]] && typeset -g suggestion="${prefix}${suffix}"
 }
 
-# --- toggle on/off (Ctrl-G) -------------------------------------------------
+# --- toggle on/off (silent; keybind only if AI_AC_TOGGLE_KEY is set) --------
 _ai_ac_toggle() {
-  if [[ "$AI_AC_ENABLED" == "1" ]]; then AI_AC_ENABLED=0
-  else AI_AC_ENABLED=1; fi
-  zle -M "AI autocomplete: $AI_AC_ENABLED"
+  [[ "$AI_AC_ENABLED" == "1" ]] && AI_AC_ENABLED=0 || AI_AC_ENABLED=1
 }
 zle -N _ai_ac_toggle
-bindkey '^G' _ai_ac_toggle
+[[ -n "$AI_AC_TOGGLE_KEY" ]] && bindkey "$AI_AC_TOGGLE_KEY" _ai_ac_toggle

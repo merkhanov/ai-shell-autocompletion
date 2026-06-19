@@ -32,19 +32,27 @@ cd ~/ai-shell-autocompletion
 exec zsh            # reload
 ```
 
-`install.sh` appends this line to your `~/.zshrc` (must come **after**
-zsh-autosuggestions is loaded):
+That's the whole footprint — `install.sh` appends a single self-contained line
+to your `~/.zshrc`:
 
 ```zsh
 source "/path/to/ai-shell-autocompletion/ai-autocomplete.plugin.zsh"
 ```
+
+The plugin loads `zsh-autosuggestions` itself if it isn't already, so order
+doesn't matter and one line is enough. If you already source
+`zsh-autosuggestions` elsewhere in your `~/.zshrc`, that line is now redundant
+and can be removed.
 
 ## Usage
 
 - Start typing a command and pause briefly — greyed ghost text appears.
 - **`→` or `End`** — accept the whole suggestion.
 - **`Ctrl-→`** — accept one word.
-- **`Ctrl-G`** — toggle AI suggestions on/off.
+
+It runs as an invisible layer: no on-screen messages, and it binds no keys of
+its own by default (so nothing you already use changes). To add an on/off
+toggle, set a key — e.g. `AI_AC_TOGGLE_KEY='^G'` before the source line.
 
 ### Make `Tab` accept (literal Cursor feel)
 
@@ -70,6 +78,7 @@ Set any of these before the source line in `~/.zshrc`:
 | `AI_AC_HISTORY_LINES` | `30` | Recent history lines sent as context |
 | `AI_AC_TIMEOUT` | `5` | Request timeout (seconds) |
 | `AI_AC_ENABLED` | `1` | Start enabled (`0` to start off) |
+| `AI_AC_TOGGLE_KEY` | _(none)_ | Key to toggle on/off, e.g. `'^G'`. Empty = bind nothing |
 | `AI_AC_DEBUG` | `0` | `1` → log to `/tmp/ai-ac.log` |
 
 A larger model (e.g. `qwen2.5-coder:3b` or `:7b`) gives better suggestions at
