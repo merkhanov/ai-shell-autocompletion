@@ -27,7 +27,7 @@ that the strategy shells out to.
 | JSON | `serde` + `serde_json` |
 | Error model | std-only `Result` / `Box<dyn Error>`; never break the shell |
 | Crate location | Repo root (`Cargo.toml` + `src/`) |
-| Python | Deleted once Rust reaches parity |
+| Python | Deleted only after differential tests confirm parity |
 | zsh front-end | Unchanged except the one line that invokes the helper |
 
 ## Architecture
@@ -106,7 +106,10 @@ Modules map 1:1 to `ailib/` so the mental model carries over directly.
 
 1. Parse argv → `prefix`.
 2. If `prefix.chars().count() < MIN_CHARS` → print nothing, exit.
-3. Read `AI_AC_HISTORY` → split non-blank lines → `Option<Vec<String>>`.
+3. Read `AI_AC_HISTORY` → split into lines, **drop only blank/whitespace-only
+   lines, keep each kept line's content verbatim** (no per-line trim — `fc -ln`
+   emits significant leading whitespace) → `Option<Vec<String>>`. Matches
+   `[h for h in hist.splitlines() if h.strip()]` in `ai_suggest.py`.
 4. `gather_context(history_lines, max_dir_entries=50, history)` → `Context`.
 5. `build_prompt(prefix, &ctx)` → FIM string.
 6. `ollama::query(...)` → raw response. On error → debug-log + silent exit.
@@ -131,8 +134,8 @@ struct Context {
     shell: String,
     git_branch: Option<String>,
     git_status: Option<String>,   // up to 10 porcelain lines, joined by '\n'
-    dir_entries: Vec<String>,     // non-dotfiles, sorted, dirs suffixed '/', cap 50
-    history: Vec<String>,         // capped at history_lines
+    dir_entries: Vec<String>,     // non-dotfiles, sorted, dirs suffixed '/', first 50
+    history: Vec<String>,         // first history_lines (not last)
 }
 ```
 
@@ -144,7 +147,8 @@ struct Context {
 - **git:** `git branch --show-current`; if non-empty, also `git status
   --porcelain` (first 10 lines). Both run through `run_with_timeout(cmd, 0.5s)`.
 - **dir_entries:** `read_dir(cwd)`, drop names starting with `.`, sort, append
-  `/` to directories, truncate to 50.
+  `/` to directories, take the **first** 50. (Python `_truncate` is `items[:n]`
+  — first-n, not last-n; same for `history`.)
 
 **`run_with_timeout` (the one genuinely new mechanism):** `std::process::Command`
 has no timeout. Implement a std-only helper that spawns the child, then polls
@@ -195,7 +199,13 @@ Cargo during implementation.
 
 ## Testing
 
-Port the four Python test modules to idiomatic inline `#[cfg(test)] mod tests`:
+Two layers: ported unit tests (Rust behaves sensibly) and **differential tests
+against the still-present Python** (Rust behaves *identically*). The spec's
+central claim is byte-parity, and hand-written Rust assertions cannot verify that
+— two implementations can both pass re-stated expectations yet diverge. The
+Python is the oracle, so we diff against it while it still exists.
+
+**Ported unit tests** — idiomatic inline `#[cfg(test)] mod tests`:
 
 - **clean:** first-line only, fence rejection, leading-space preservation,
   echoed-prefix strip, blank/equals-prefix → `""`.
@@ -203,12 +213,31 @@ Port the four Python test modules to idiomatic inline `#[cfg(test)] mod tests`:
 - **ollama:** `parse_response` extracts `response`; returns `""` on malformed JSON.
 - **context:** returns cwd/os/shell; dir filtering + truncation; never panics.
 
+**Differential (golden) tests on the deterministic surfaces** — the real parity
+oracle. End-to-end can't be diffed (Ollama is non-deterministic and needs a
+server), so we diff the pure, deterministic functions:
+
+- **`build_prompt`** over a fixed `Context` (fixed cwd, os, shell, git fields,
+  dir entries, history) → assert the Rust prompt equals the Python `build_prompt`
+  output **byte-for-byte**. Highest-value oracle: the prompt *is* what reaches
+  Ollama.
+- **`clean_suggestion`** and **`parse_response`** are pure → run Python and Rust
+  on shared fixture inputs and assert identical outputs.
+
+Implementation note: capture the Python outputs as committed golden fixtures
+(generated once from the current `ailib/`), so the Rust test suite diffs against
+them without needing Python at `cargo test` time.
+
 `cargo test` replaces `python3 -m unittest`.
 
 **Manual seam check** (team memory flags the zsh↔helper seam as the silent
 failure point): run `ai-suggest -- "git "` by hand and confirm a plausible
 suffix on stdout; then source the plugin and confirm ghost text still renders and
 accept still works.
+
+**Sequencing:** delete the Python only **after** the differential tests pass —
+it is the parity oracle, so it must not be discarded before it has been used to
+verify the port.
 
 ## Install & docs
 
