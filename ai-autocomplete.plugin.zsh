@@ -74,7 +74,7 @@ _zsh_autosuggest_strategy_ai() {
 
   local hist; hist="$(fc -ln -$AI_AC_HISTORY_LINES 2>/dev/null)"
   local suffix
-  suffix="$(AI_AC_HISTORY=$hist python3 "$_AI_AC_DIR/ai_suggest.py" -- "$prefix" 2>/dev/null)"
+  suffix="$(AI_AC_HISTORY=$hist "$_AI_AC_DIR/target/release/ai-suggest" -- "$prefix" 2>/dev/null)"
   [[ -n $suffix ]] && typeset -g suggestion="${prefix}${suffix}"
 }
 
