@@ -151,9 +151,13 @@ struct Context {
   — first-n, not last-n; same for `history`.)
 
 **`run_with_timeout` (the one genuinely new mechanism):** `std::process::Command`
-has no timeout. Implement a std-only helper that spawns the child, then polls
-`try_wait()` against a deadline, killing the child on overrun and returning `""`.
-Mirrors Python's `subprocess.run(..., timeout=0.5)`; no extra dependency.
+has no timeout. Implement a std-only helper: spawn the child with piped stdout,
+move it into a reader thread that calls `wait_with_output()`, and bound the wait
+with `mpsc::Receiver::recv_timeout(deadline)`; on timeout return `""` (the child
+is left to finish on its own — for the only callers, `git branch`/`git status`,
+the reader thread drains stdout so there's no pipe-buffer deadlock and the fast
+git process exits promptly). Mirrors Python's `subprocess.run(..., timeout=0.5)`;
+no extra dependency.
 
 ### prompt.rs
 Port `FIM_PREFIX/SUFFIX/MIDDLE`, `STOP_TOKENS`, and the context-comment renderer.
