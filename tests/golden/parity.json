@@ -1,0 +1,95 @@
+{
+  "build_prompt": [
+    {
+      "prefix": "git che",
+      "ctx": {
+        "cwd": "/home/u/proj",
+        "os": "Darwin",
+        "shell": "zsh",
+        "git_branch": "main",
+        "git_status": "M file.py\nA new.py",
+        "dir_entries": [
+          "src/",
+          "README.md"
+        ],
+        "history": [
+          "cd proj",
+          "ls"
+        ]
+      },
+      "expected": "<|fim_prefix|># cwd: /home/u/proj\n# os: Darwin shell: zsh\n# git branch: main\n# changed files: M file.py, A new.py\n# files: src/, README.md\n# recent: cd proj; ls\ngit che<|fim_suffix|><|fim_middle|>"
+    },
+    {
+      "prefix": "ls",
+      "ctx": {},
+      "expected": "<|fim_prefix|>ls<|fim_suffix|><|fim_middle|>"
+    },
+    {
+      "prefix": "grep -r",
+      "ctx": {
+        "cwd": "/tmp"
+      },
+      "expected": "<|fim_prefix|># cwd: /tmp\ngrep -r<|fim_suffix|><|fim_middle|>"
+    },
+    {
+      "prefix": "docker ",
+      "ctx": {
+        "cwd": "/srv",
+        "os": "Linux",
+        "shell": "zsh",
+        "git_branch": "dev"
+      },
+      "expected": "<|fim_prefix|># cwd: /srv\n# os: Linux shell: zsh\n# git branch: dev\ndocker <|fim_suffix|><|fim_middle|>"
+    }
+  ],
+  "clean": [
+    {
+      "raw": "git checkout main",
+      "prefix": "git che",
+      "expected": "ckout main"
+    },
+    {
+      "raw": "ckout main\nrm -rf /",
+      "prefix": "git che",
+      "expected": "ckout main"
+    },
+    {
+      "raw": " \"pattern\" .",
+      "prefix": "grep -r",
+      "expected": " \"pattern\" ."
+    },
+    {
+      "raw": "```bash",
+      "prefix": "git che",
+      "expected": ""
+    },
+    {
+      "raw": "git che",
+      "prefix": "git che",
+      "expected": ""
+    },
+    {
+      "raw": "   ",
+      "prefix": "git che",
+      "expected": ""
+    }
+  ],
+  "parse_response": [
+    {
+      "body": "{\"response\": \"ckout main\"}",
+      "expected": "ckout main"
+    },
+    {
+      "body": "not json",
+      "expected": ""
+    },
+    {
+      "body": "{\"x\": 1}",
+      "expected": ""
+    },
+    {
+      "body": "{\"response\": \"\"}",
+      "expected": ""
+    }
+  ]
+}

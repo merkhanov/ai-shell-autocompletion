@@ -12,9 +12,9 @@ zsh-autosuggestions, no model call), and only falls back to **AI** when history
 has no match. So commands you've run before are instant and free; novel commands
 get a context-aware AI suggestion a moment later.
 
-Under the hood it registers a custom suggestion *strategy* that calls a small
-Python helper, which gathers context (cwd, git, history, directory, OS), prompts
-Ollama, and returns the completion.
+Under the hood it registers a custom suggestion *strategy* that shells out to a
+small Rust binary (`ai-suggest`), which gathers context (cwd, git, history,
+directory, OS), prompts Ollama, and returns the completion.
 
 Completions use **fill-in-middle (FIM)**, the mode `qwen2.5-coder` is trained
 for — it produces clean continuations instead of the echoes/markdown you get
@@ -26,14 +26,14 @@ from instruction-style prompts, so even the tiny 1.5b model works well.
 - A `qwen2.5-coder` model pulled (default `qwen2.5-coder:1.5b`): `ollama pull qwen2.5-coder:1.5b`
   - The FIM prompt is `qwen2.5-coder`-specific; other models need a different prompt.
 - [`zsh-autosuggestions`](https://github.com/zsh-users/zsh-autosuggestions) installed and sourced in your `.zshrc`
-- Python 3 (standard library only — no pip packages)
+- Rust toolchain (`cargo`) — builds a small binary, `ureq` + `serde` only
 
 ## Install
 
 ```bash
 git clone <this-repo> ~/ai-shell-autocompletion
 cd ~/ai-shell-autocompletion
-./install.sh        # checks deps, pulls the model, adds a source line to ~/.zshrc
+./install.sh        # checks deps, pulls the model, runs cargo build --release, adds a source line to ~/.zshrc
 exec zsh            # reload
 ```
 
@@ -96,7 +96,7 @@ for snappier suggestions.
 ```
 zsh-autosuggestions  →  history?  ──found──►  instant suggestion (no model call)
    renders ghost text       │
-   accept / discard         └─none─►  strategy "ai" → (debounce) → ai_suggest.py
+   accept / discard         └─none─►  strategy "ai" → (debounce) → ai-suggest binary
    async forked worker                                    gather context
                                                           build prompt (FIM)
                                                           POST Ollama /api/generate
@@ -108,7 +108,7 @@ greys the part after what you typed. Debounce is content-based: the worker
 sleeps, then only calls Ollama if the buffer hasn't changed — so rapid typing
 doesn't flood the model.
 
-The helper prompts Ollama in **fill-in-middle** mode: context is rendered as
+The binary prompts Ollama in **fill-in-middle** mode: context is rendered as
 shell comments, then the partial command, with an empty suffix — so the model
 fills the gap (the rest of the command). This is why a 1.5b model gives clean
 completions: it's continuing text, not answering a question.
@@ -124,12 +124,12 @@ completions: it's continuing text, not answering a question.
 
 ## Development
 
-Run the unit tests (stdlib only, no deps):
+Run the unit and differential parity tests:
 
 ```bash
-python3 -m unittest discover -s tests -v
+cargo test            # unit + differential parity tests
 ```
 
-The Python logic — prompt building, output cleaning, Ollama parsing, context —
-lives in `ailib/` and is unit-tested. The zsh front-end is in
+The Rust logic — prompt building, output cleaning, Ollama parsing, context —
+lives in `src/` and is unit-tested. The zsh front-end is in
 `ai-autocomplete.plugin.zsh`.
